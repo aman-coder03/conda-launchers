@@ -10,38 +10,41 @@ permissions:
 
 jobs:
   build:
-    name: Build Launchers
-    runs-on: ubuntu-latest
+    name: Build Windows Launchers
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Build Dependencies
+      - name: Install Pixi
         run: |
-          python -m pip install --upgrade pip
-          pip install build pyinstaller
+          irm https://pixi.sh/install.ps1 | iex
+
+      - name: Verify Pixi Install
+        run: pixi --version
+
+      - name: Install Dependencies
+        run: pixi install
 
       - name: Build Launchers
-        run: |
-          python build.py
+        run: pixi run build
 
-      - name: Generate Checksums
+      - name: Collect Build Artifacts
         run: |
-          sha256sum dist/* > SHA256SUMS.txt
+          mkdir release
+          copy output\**\*.exe release\
+
+      - name: Generate SHA256 Checksums
+        run: |
+          certutil -hashfile release\*.exe SHA256 > release\SHA256SUMS.txt
 
       - name: Upload Assets to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*
-            SHA256SUMS.txt
-
+            release/*
+  
   sign:
     name: Sign & Attest Artifacts
     needs: build
@@ -63,7 +66,7 @@ jobs:
 
       - name: Sign Binaries with Sigstore
         run: |
-          for f in release-assets/*; do
+          for f in release-assets/*.exe; do
             cosign sign-blob --yes "$f"
           done
 
@@ -72,4 +75,4 @@ jobs:
           cosign attest-blob \
             --predicate ./release-assets/SHA256SUMS.txt \
             --type slsaprovenance \
-            ./release-assets/*
+            ./release-assets/*.exe
