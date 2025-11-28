@@ -9,58 +9,44 @@ permissions:
   id-token: write
 
 jobs:
-  build:
-    name: Build Windows Launchers
+  rattler_build_release:
+    name: Rattler Build (Release)
     runs-on: windows-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout Source
         uses: actions/checkout@v4
-
-      # ✅ REQUIRED: GNU toolchain for zig -windows-gnu
-      - name: Install MSYS2 and MinGW
-        uses: msys2/setup-msys2@v2
         with:
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-i686-gcc
-            mingw-w64-x86_64-zlib
-            mingw-w64-i686-zlib
+          fetch-depth: 1
 
-      # ✅ OFFICIAL PIXI ACTION (NO PATH ISSUES)
+      #Same Pixi setup as upstream test.yml
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.6.0
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
 
-      - name: Verify Pixi Install
-        run: pixi --version
-
-      - name: Install Dependencies
-        run: pixi install
-
-      - name: Build Launchers
+      #Same build command as upstream
+      - name: Run Build
+        shell: pwsh
         run: pixi run build
 
-      - name: Collect Build Artifacts
-        shell: pwsh
-        run: |
-          mkdir release
-          copy output\**\*.exe release\
-
+      #Generate SHA256 checksums for release
       - name: Generate SHA256 Checksums
         shell: pwsh
         run: |
-          certutil -hashfile release\*.exe SHA256 > release\SHA256SUMS.txt
+          certutil -hashfile ./output/noarch/conda-launchers*.conda SHA256 > SHA256SUMS.txt
 
+      #Upload build artifacts + checksums to GitHub Release
       - name: Upload Assets to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/*
+            ./output/noarch/conda-launchers*.conda
+            SHA256SUMS.txt
 
   sign:
     name: Sign & Attest Artifacts
-    needs: build
+    needs: rattler_build_release
     runs-on: ubuntu-latest
 
     permissions:
@@ -77,9 +63,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sign Binaries with Sigstore
+      - name: Sign Files with Sigstore
         run: |
-          for f in release-assets/*.exe; do
+          for f in release-assets/*.conda; do
             cosign sign-blob --yes "$f"
           done
 
@@ -88,4 +74,4 @@ jobs:
           cosign attest-blob \
             --predicate ./release-assets/SHA256SUMS.txt \
             --type slsaprovenance \
-            ./release-assets/*.exe
+            ./release-assets/*.conda
