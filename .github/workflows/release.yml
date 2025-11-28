@@ -28,7 +28,7 @@ jobs:
       #Same build command as upstream
       - name: Run Build
         shell: pwsh
-        run: pixi run build
+        run: pixi run build --variant win-32 --variant win-64
 
       #Generate SHA256 checksums for release
       - name: Generate SHA256 Checksums
