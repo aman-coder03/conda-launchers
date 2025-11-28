@@ -7,17 +7,17 @@ if %PKG_NAME% == conda-launchers (exit 0)
 move /Y launcher.c.orig launcher.c
 
 if %PKG_NAME% == conda-launchers_win-32 (
-    set ZIG_TARGET=x86-windows-gnu
+    set ZIG_TARGET=x86-windows-msvc
     set EXE_TARGET=32
 )
 
 if %PKG_NAME% == conda-launchers_win-64 (
-    set ZIG_TARGET=x86_64-windows-gnu
+    set ZIG_TARGET=x86_64-windows-msvc
     set EXE_TARGET=64
 )
 
 if %PKG_NAME% == conda-launchers_win-arm64 (
-    set ZIG_TARGET=aarch64-windows-gnu
+    set ZIG_TARGET=aarch64-windows-msvc
     set EXE_TARGET=arm64
 )
 
