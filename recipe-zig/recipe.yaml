@@ -13,18 +13,23 @@ source:
     file_name: launcher.c.orig
     patches:
       - ../src/cpython-launcher-c-mods-for-setuptools.3.7.patch
+
   - url: https://raw.githubusercontent.com/python/cpython/3.7/LICENSE
     sha256: 96e4f59524cde5af4a2ea837ef5e52b65e51f1f999825fd8a9ec3b444cb82aea
     file_name: cpython-LICENSE
+
   - path: ../src
 
 build:
   number: ${{ build_number }}
   skip:
     - unix
-    - win and arm64 # this ensures builds only trigger on win-64
+    - win and arm64   # ✅ ARM64 FULLY DISABLED
 
 outputs:
+  # -------------------------
+  # META PACKAGE
+  # -------------------------
   - package:
       name: ${{ name }}
 
@@ -35,38 +40,34 @@ outputs:
       run:
         - ${{ name }}_win-32 ${{ version }}
         - ${{ name }}_win-64 ${{ version }}
-        - ${{ name }}_win-arm64 ${{ version }}
 
     tests:
       - requirements:
           run:
             - ${{ name }}_win-32 ${{ version }}
             - ${{ name }}_win-64 ${{ version }}
-            - ${{ name }}_win-arm64 ${{ version }}
         script:
           # cli
           - if not exist %PREFIX%\Scripts\cli-32.exe exit 1
           - if not exist %PREFIX%\Scripts\cli-32-script.py exit 1
           - call "%PREFIX%\Scripts\cli-32.exe"
+
           - if not exist %PREFIX%\Scripts\cli-64.exe exit 1
           - if not exist %PREFIX%\Scripts\cli-64-script.py exit 1
           - call "%PREFIX%\Scripts\cli-64.exe"
-          - if not exist %PREFIX%\Scripts\cli-arm64.exe exit 1
-          - if not exist %PREFIX%\Scripts\cli-arm64-script.py exit 1
-          - if: win and arm64
-            then: call "%PREFIX%\Scripts\cli-arm64.exe"
+
           # gui
           - if not exist %PREFIX%\Scripts\gui-32.exe exit 1
           - if not exist %PREFIX%\Scripts\gui-32-script.pyw exit 1
           - call "%PREFIX%\Scripts\gui-32.exe"
+
           - if not exist %PREFIX%\Scripts\gui-64.exe exit 1
           - if not exist %PREFIX%\Scripts\gui-64-script.pyw exit 1
           - call "%PREFIX%\Scripts\gui-64.exe"
-          - if not exist %PREFIX%\Scripts\gui-arm64.exe exit 1
-          - if not exist %PREFIX%\Scripts\gui-arm64-script.pyw exit 1
-          - if: win and arm64
-            then: call "%PREFIX%\Scripts\gui-arm64.exe"
 
+  # -------------------------
+  # WIN-32 PACKAGE
+  # -------------------------
   - package:
       name: ${{ name }}_win-32
 
@@ -76,7 +77,6 @@ outputs:
     requirements:
       build:
         - zig >=0.13.0
-
       run:
         - python
         - __win
@@ -84,13 +84,14 @@ outputs:
     tests:
       - package_contents:
           files:
-            # cli
             - Scripts/cli-32.exe
             - Scripts/cli-32-script.py
-            # gui
             - Scripts/gui-32.exe
             - Scripts/gui-32-script.pyw
 
+  # -------------------------
+  # WIN-64 PACKAGE
+  # -------------------------
   - package:
       name: ${{ name }}_win-64
 
@@ -100,7 +101,6 @@ outputs:
     requirements:
       build:
         - zig >=0.13.0
-
       run:
         - python
         - __win
@@ -108,36 +108,10 @@ outputs:
     tests:
       - package_contents:
           files:
-            # cli
             - Scripts/cli-64.exe
             - Scripts/cli-64-script.py
-            # gui
             - Scripts/gui-64.exe
             - Scripts/gui-64-script.pyw
-
-  - package:
-      name: ${{ name }}_win-arm64
-
-    build:
-      noarch: generic
-
-    requirements:
-      build:
-        - zig >=0.13.0
-
-      run:
-        - python
-        - __win
-
-    tests:
-      - package_contents:
-          files:
-            # cli
-            - Scripts/cli-arm64.exe
-            - Scripts/cli-arm64-script.py
-            # gui
-            - Scripts/gui-arm64.exe
-            - Scripts/gui-arm64-script.pyw
 
 about:
   homepage: https://github.com/conda/conda-launchers
